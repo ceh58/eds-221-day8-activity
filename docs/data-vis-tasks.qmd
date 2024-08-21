@@ -1,0 +1,95 @@
+---
+title: "Data Visualization Practice"
+author: "Carmen"
+format: html
+editor: visual
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r}
+library(tidyverse)
+library(here)
+```
+
+```{r}
+space_data <- read_csv(here("data", "space_launches.csv"))
+
+ggplot(space_data, aes(y = launch_year))+
+  geom_bar(aes(fill = "black", size = 0.5), show.legend = FALSE)+
+  labs(x = "some launches",
+       y = "some years",
+       title = "launching things into space",
+       caption = "data: who knows")+
+  scale_x_continuous(limits = c(-10, 200))+
+  scale_y_continuous(limits = c(1950, 2050),
+                     labels = scales::label_comma())+
+  theme(panel.grid.minor = element_line(color = "#EB6424", 
+                                        size = 3),
+        panel.grid.major = element_line(color = "#DFB2F4", 
+                                        size = 3),
+        plot.background = element_rect(fill = "#419D78"),
+        text = (element_text(size = 20, 
+                             family = "serif",
+                             color = "cyan")),
+        axis.text.x = element_text(color = "blue", 
+                                   family = "sans"),
+        axis.text.y = element_text(color = "#C04ABC"),
+        panel.background = element_rect(color = "#FA9500", 
+                                        size = 3,
+                                        fill = "#631A86")
+        )+
+  annotate("segment", x = 155, xend = 165, y = 2030, yend = 2045, color = "green", arrow = arrow())
+
+ggsave(here("figs", "bad_graph.png"))
+```
+
+## Task 2
+
+```{r}
+library(janitor)
+emissions <- read_csv(here("data", "San_Francisco_Communitywide_Greenhouse_Gas_Inventory.csv")) %>%
+  janitor::clean_names()
+
+summary_emissions_1 <- emissions %>%
+  group_by(sector_general) %>%
+  summarize(total_annual_emissions = sum(emissions_mt_co2e, na.rm = TRUE))
+
+summary_emissions_2 <- emissions %>%
+  group_by(calendar_year, commodity_type) %>%
+  summarize(total_annual_emisisons = sum(emissions_mt_co2e, na.rm = TRUE))
+
+summary_emissions_3 <- emissions %>%
+  filter(calendar_year >= 2005) %>%
+  filter(str_detect(sector_detail2, "PG&E")) %>%
+  select(calendar_year, sector_detail2, emissions_mt_co2e)
+```
+
+```{r}
+sf_public_transport <- emissions %>%
+  filter(sector_detail1 == "Public Transportation") %>%
+  #filter(str_detect(sector_detail2, "Rail")) %>%
+  #filter(str_detect(sector_detail2, "Bus")) %>%
+  group_by(calendar_year, sector_detail2) %>%
+  summarize(annual_emissions = sum(emissions_mt_co2e, na.rm = TRUE))
+
+pt_names <- c('Bus - Caltrain' = "Caltrain (Bus)",
+              'Bus - Golden Gate Transit' = "Golden Gate Transit (Bus)",
+              'Ferry' = "Ferry",
+              'MUNI' = "MUNI",
+              'Rail - BART' = "BART (Rail)",
+              'Rail - Caltrain' = "Caltrain (Rail)")
+
+ggplot(sf_public_transport, aes(x = calendar_year, y = annual_emissions)) +
+  geom_line(aes(color = sector_detail2), show.legend = FALSE)+
+  facet_wrap(~sector_detail2, scales = "free", labeller = as_labeller(pt_names))+
+  labs(x = "Year",
+       y = "Annual Emissions \n(mt CO2)\n",
+       title = "SF Public Transportation Emissions",
+       caption = "Data: San Francisco Communitywide Greenhouse Gas Inventory")+
+  scale_color_discrete(type = c("#1C110A", "#E4D6A7", "#E9B44C", "#9B2915", "#50A2A7","#8AE1FC" ))+
+  theme_bw() 
+
+ggsave(here("figs", "sf_pt_emissions.png"))
+```
+
